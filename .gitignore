@@ -4,3 +4,4 @@
 *.ipynb
 data
 *.txt
+*.out
