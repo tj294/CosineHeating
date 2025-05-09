@@ -133,6 +133,7 @@ if not direc.exists():
     raise FileNotFoundError(f"Directory {direc} does not exist")
 outpath = direc.joinpath("images/")
 outpath.mkdir(exist_ok=True)
+outvalues = {}
 
 #! Params
 with open(direc.joinpath("run_params/runparams.json"), 'r') as f:
@@ -142,6 +143,10 @@ Pr = params['Pr']
 Ta = params['Ta']
 Ly, Lz = params['Ly'], params['Lz']
 Ny, Nz = params['Ny'], params['Nz']
+
+outvalues['Rf'] = Rf
+outvalues['Pr'] = Pr
+outvalues['Ta'] = Ta
 
 #! Time Tracks
 if energies:
@@ -294,6 +299,11 @@ if temp_profile:
     print("Creating Temp Profile...")
     T_bar = np.nanmean(Temp[hASI:hAEI], axis=0)
     print("Done.")
+    Tl_cz = T_bar[hl]
+    Tl = T_bar[0]
+    Tu_cz = T_bar[hu]
+    Tu = T_bar[-1]
+    dT_cz = Tl_cz
     fig, ax = plt.subplots()
     ax.plot(T_bar/T_bar[0], z, c='k')
     ax.set_xlabel('<T>/<T(z=0)>')
@@ -314,6 +324,8 @@ if nusselt:
         trapezoid(F_conv_bar, z, axis=0) / trapezoid(F_cond_bar, z, axis=0)
     )
 
+    outvalues['Nu_cz'] = nu_CZ
+    outvalues['Nu_box'] = nu_box
 
     print(f"\tNu(CZ) = {nu_CZ:.2f}\n\tNu(box) = {nu_box:.2f}")
 
@@ -345,6 +357,15 @@ if power_integrals:
     visc_disc = np.abs((RfwTbar - gradubar)/gradubar) * 100
     print(f"<gradT> = {gradTbar:.2e}, <QT> = {qTbar:.2e}, disc: {temp_disc:.2f}%")
     print(f"<gradu> = {gradubar:.2e}, Rf*<wT> = {RfwTbar:.2e}, disc: {visc_disc:.2f}%")
+
+    outvalues['gradT'] = gradTbar
+    outvalues['QT'] = qTbar
+    outvalues['gradu'] = gradubar
+    outvalues['RfwT'] = RfwTbar
+
+    Nu_ss = 1 / gradTbar
+    outvalues['Nu_ss'] = Nu_ss
+    print(f"SS Nu = {Nu_ss:.2f}")
 
 if reynolds:
     print("Reynolds number not yet implemented")
@@ -391,26 +412,9 @@ if args['--gif']:
             writer.append_data(image)
     print("\nDone.")
 
-exit()
 with open(direc.joinpath("outscalars.json"), "w") as f:
     json.dump(
-        {
-            "Rf": Rf,
-            "Pr": Pr,
-            "Ta": Ta,
-            # "Ro_C": Ro_c,
-            "HW": hwidth,
-            "Nu_CZ": nu_CZ,
-            "Nu_box": nu_box,
-            "Re_CZ": Re_ave_cz,
-            "Re_box": Re_ave_box,
-            # "Ro_cz": Ro_cz_ave,
-            # "Ro_box": Ro_b_ave,
-            # "gradT": gradT_ave,
-            # "gradu": gradu_ave,
-            # "QT": qT_ave,
-            # "RfwT": RfwT_ave,
-        },
+        outvalues,
         f,
         indent=4,
     )
